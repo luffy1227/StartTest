@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>坦克大战</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background-color: #606060;
+        }
+        .overlay div {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: auto; /* 允许点击事件 */
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div class="overlay">
+    <div id="infoBox" style="left: 10px; top: 10px;">
+        0
+    </div>
+</div>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 设置画布大小
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // 坦克类
+    class Tank {
+        constructor(x, y, width, height, color, speed) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.color = color;
+            this.speed = speed;
+            this.bullets = [];
+            this.direct = 'up';
+        }
+
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        drawPipe() {
+            ctx.fillStyle = this.color;
+            let x=0;
+            let y=0;
+            switch (this.direct){
+                case 'up':
+                    x= this.x+this.width/2-this.width/16;
+                    y = this.y-this.height/2;
+                    ctx.fillRect(x, y, this.width/8, this.height/2);
+                    break;
+                case 'down':
+                    x= this.x+this.width/2-this.width/16;
+                    y = this.y+this.height;
+                    ctx.fillRect(x, y, this.width/8, this.height/2);
+                    break;
+                case 'left':
+                    x= this.x-this.width/2;
+                    y = this.y+this.height/2-this.height/16;
+                    ctx.fillRect(x, y, this.width/2, this.height/8);
+                    break;
+                case 'right':
+                    x= this.x+this.width;
+                    y = this.y+this.height/2-this.height/16;
+                    ctx.fillRect(x, y, this.width/2, this.height/8);
+                    break;
+            }
+            ctx.fillRect(this.x, this.y, this.width/8, this.height/2);
+        }
+
+        moveUp() { this.y -= this.speed; this.direct='up';}
+        moveDown() { this.y += this.speed; this.direct='down';}
+        moveLeft() { this.x -= this.speed; this.direct='left';}
+        moveRight() { this.x += this.speed; this.direct='right';}
+
+        shoot() {
+            let x,y,width,height;
+            switch (this.direct) {
+                case 'up':
+                    x = this.x + this.width / 2-this.width /16;
+                    y = this.y;
+                    width = this.width/8;
+                    height = this.height/4;
+                    break;
+                case 'down':
+                    x = this.x + this.width / 2-this.width /16;
+                    y = this.y+this.height;
+                    width = this.width/8;
+                    height = this.height/4;
+                    break;
+                case 'left':
+                    x = this.x;
+                    y = this.y + this.height / 2-this.height /16;
+                    width = this.width/4;
+                    height = this.height/8;
+                    break;
+                case 'right':
+                    x = this.x + this.width;
+                    y = this.y + this.height / 2-this.height /16;
+                    width = this.width/4;
+                    height = this.height/8;
+                    break;
+            }
+            const bullet = {
+                x: x,
+                y: y,
+                width: width,
+                height: height,
+                speed: 10,
+                color: 'red',
+                direct: this.direct
+            };
+            this.bullets.push(bullet);
+        }
+
+        updateBullets() {
+            for (let i = 0; i < this.bullets.length; i++) {
+                const bullet = this.bullets[i];
+                console.log(bullet);
+                switch (bullet.direct){
+                    case 'up':
+                        bullet.y -= bullet.speed;
+                        if (bullet.y < 0) {
+                            this.bullets.splice(i, 1);
+                            i--;
+                        }
+                        break;
+                    case 'down':
+                        bullet.y += bullet.speed;
+                        if (bullet.y > canvas.height) {
+                            this.bullets.splice(i, 1);
+                            i--;
+                        }
+                        break;
+                    case 'left':
+                        bullet.x -= bullet.speed;
+                        if (bullet.x < 0) {
+                            this.bullets.splice(i, 1);
+                            i--;
+                        }
+                        break;
+                    case 'right':
+                        bullet.x += bullet.speed;
+                        if (bullet.x > canvas.width) {
+                            this.bullets.splice(i, 1);
+                            i--;
+                        }
+                        break;
+                }
+            }
+        }
+
+        drawBullets() {
+            for (const bullet of this.bullets) {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            }
+        }
+    }
+
+    // 创建坦克实例
+    const playerTank = new Tank(100, 500, 40, 40, 'green', 10);
+    const enemyTank = new Tank(100, 0, 40, 40, 'blue', 1);
+
+    // function productEnemy(){
+    //     let cnt = 10;
+    //     for (let i= 0; i<cnt;i++){
+    //         enemyTanks.push(new Tank(0, 100*i, 40, 40, 'blue');
+    //     }
+    // }
+
+    // 键盘事件监听
+    document.addEventListener('keydown', (event) => {
+        switch (event.key) {
+            case 'ArrowUp':
+                playerTank.moveUp();
+                break;
+            case 'ArrowDown':
+                playerTank.moveDown();
+                break;
+            case 'ArrowLeft':
+                playerTank.moveLeft();
+                break;
+            case 'ArrowRight':
+                playerTank.moveRight();
+                break;
+            case ' ':
+                playerTank.shoot();
+                break;
+        }
+    });
+
+    function gameLoop() {
+        // 清屏
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 更新并绘制坦克
+        playerTank.updateBullets();
+        playerTank.draw();
+        playerTank.drawPipe()
+        playerTank.drawBullets();
+
+        // enemyTank.draw();
+        // if (enemyTank.y > window.innerHeight){
+        //     gameOver();
+        // }
+        // enemyTank.moveDown();
+        // check(playerTank, enemyTank);
+        // 请求下一帧动画
+        requestAnimationFrame(gameLoop);
+    }
+
+    let cnt = 0;
+    function check(playerTank, enemyTank){
+        for (let i = 0; i < playerTank.bullets.length; i++) {
+            const bullet = playerTank.bullets[i];
+            let y = bullet.y;
+            if (y < enemyTank.y && y> enemyTank.y-enemyTank.height
+                && bullet.x>enemyTank.x && bullet.x< enemyTank.x+enemyTank.width){
+                enemyTank.x += 100;
+                enemyTank.y = 0;
+                playerTank.bullets[i].y=0;
+                cnt++;
+                document.getElementById("infoBox").innerHTML = cnt;
+                break;
+            }
+        }
+    }
+
+    function gameOver() {
+        alert('Game Over!');
+        enemyTank.y = 0;
+    }
+    // 开始游戏循环
+    gameLoop();
+
+</script>
+</body>
+</html>
