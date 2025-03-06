@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>俄罗斯方块</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        canvas { border: 1px solid black; display: block; margin: 0 auto; }
+    </style>
+</head>
+<body>
+<canvas id="tetris" width="320" height="640"></canvas>
+<script>
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+
+    // 设置网格大小
+    const gridSize = 20;
+    context.scale(gridSize, gridSize);
+
+    function drawMatrix(matrix, offset) {
+        matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    context.fillStyle = 'purple';
+                    context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                }
+            });
+        });
+    }
+
+    function arenaSweep() {
+        let rowCount = 1;
+        outer: for (let y = arena.length - 1; y > 0; --y) {
+            for (let x = 0; x < arena[y].length; ++x) {
+                if (arena[y][x] === 0) {
+                    continue outer;
+                }
+            }
+            const row = arena.splice(y, 1)[0].fill(0);
+            arena.unshift(row);
+            ++y;
+
+            player.score += rowCount * 10;
+            rowCount *= 2;
+        }
+    }
+
+    function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 &&
+                    (arena[y + o.y] &&
+                        arena[y + o.y][x + o.x]) !== 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    arena[y + player.pos.y][x + player.pos.x] = value;
+                }
+            });
+        });
+    }
+
+    function createMatrix(w, h) {
+        const matrix = [];
+        while (h--) {
+            matrix.push(new Array(w).fill(0));
+        }
+        return matrix;
+    }
+
+    function createPiece(type) {
+        if (type === 'T') {
+            return [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ];
+        } else if (type === 'O') {
+            return [
+                [2, 2],
+                [2, 2],
+            ];
+        }
+        // 可以添加更多形状...
+    }
+
+    let dropCounter = 0;
+    let dropInterval = 1000;
+    let lastTime = 0;
+
+    function update(time = 0) {
+        const deltaTime = time - lastTime;
+        lastTime = time;
+
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) {
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+                merge(arena, player);
+                playerReset();
+                arenaSweep();
+                updateScore();
+            }
+            dropCounter = 0;
+        }
+
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function playerReset() {
+        const pieces = 'ITOZSJL';
+        player.matrix = createPiece(pieces[(pieces.length * Math.random()) | 0]);
+        player.pos.y = 0;
+        player.pos.x = ((arena[0].length / 2) | 0) -
+            ((player.matrix[0].length / 2) | 0);
+        if (collide(arena, player)) {
+            arena.forEach(row => row.fill(0));
+            player.score = 0;
+            updateScore();
+        }
+    }
+
+    let arena = createMatrix(12, 20);
+    let player = {
+        pos: {x: 0, y: 0},
+        matrix: null,
+        score: 0,
+    };
+
+    document.addEventListener('keydown', event => {
+        if (event.keyCode === 37) {
+            player.pos.x--;
+            if (collide(arena, player)) {
+                player.pos.x++;
+            }
+        } else if (event.keyCode === 39) {
+            player.pos.x++;
+            if (collide(arena, player)) {
+                player.pos.x--;
+            }
+        } else if (event.keyCode === 40) {
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+            }
+        }
+    });
+
+    function draw() {
+        context.fillStyle = '#000';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawMatrix(arena, {x: 0, y: 0});
+        drawMatrix(player.matrix, player.pos);
+    }
+
+    function updateScore() {
+        document.querySelector('.score').innerText = player.score;
+    }
+
+    playerReset();
+    update();
+
+</script>
+</body>
+</html>
